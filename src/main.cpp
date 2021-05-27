@@ -7,7 +7,8 @@
 #include <Adafruit_NeoPixel.h>
 
 WiFiManager wifiManager;
-PubSubClient client(ESPLwIPClient);
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 void saveConfigCallback();
 void loadParameters();
@@ -15,24 +16,30 @@ void saveParameters();
 void reconnect();
 void callback(char *topic, byte *payload, unsigned int length);
 
-#define LED 23
+#define LED 25
 #define MSG_BUFFER_SIZE (50)
+#define NUMPIXELS 12
 
 char devID[10];
 char PortalName[20];
 
 char mqtt_Server[20];
 char sendPort[6];
-char PubTopic = "test";
-char SubTopic = "test";
+char *PubTopic = "test";
+char *SubTopic = "test";
 
 char msg[MSG_BUFFER_SIZE];
 
 uint32_t chipId = 0;
+unsigned long lastMsg = 0;
+unsigned long value = 0;
+int r = 0;
+int g = 0;
+int b = 0;
 
 bool shouldSaveConfig = true; //flag for saving data / erase data
 
-Adafruit_NeoPixel ringLed(12, LED, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel ringLed(NUMPIXELS, LED, NEO_GBR + NEO_KHZ800);
 
 void setup()
 {
@@ -103,7 +110,7 @@ void setup()
   Serial.println();
   Serial.println("Done");
 
-  client.setServer(mqtt_Server, sendPort);
+  client.setServer("mqtt.devlol.org", 1883);
   client.setCallback(callback);
 
   ringLed.begin();
@@ -111,7 +118,17 @@ void setup()
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
+  if (!client.connected())
+  {
+    reconnect();
+  }
+  client.loop();
+
+  for (int i = 0; i < NUMPIXELS; i++)
+  {
+    ringLed.setPixelColor(i, ringLed.Color(r, g, b));
+  }
+  ringLed.show();
 }
 
 void saveConfigCallback()
@@ -204,32 +221,50 @@ void saveParameters()
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
+  char msgIn[15];
+  int count = 0;
+
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
+
   for (int i = 0; i < length; i++)
   {
     Serial.print((char)payload[i]);
+    msgIn[i] = (char)payload[i + 1];
+    count++;
   }
+  msgIn[count + 1] = '/0';
   Serial.println();
+
+  long number = (long)strtol(msgIn, NULL, 16);
+
+  r = number >> 16;
+  g = number >> 8 & 0xFF;
+  b = number & 0xFF;
 }
 
 void reconnect()
 {
   // Loop until we're reconnected
+  Serial.println("reconnect");
+
   while (!client.connected())
   {
     Serial.print("Attempting MQTT connection...");
     // Create a random client ID
     // devID += String(random(0xffff), HEX);
     // Attempt to connect
-    if (client.connect(PortalName) {
+    if (client.connect(PortalName))
+    {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish(PubTopic, PortalName);
+      client.publish("devlol/IoTlights", PortalName);
       // ... and resubscribe
-      client.subscribe(SubTopic);
-    } else {
+      client.subscribe("devlol/IoTlights/color");
+    }
+    else
+    {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
