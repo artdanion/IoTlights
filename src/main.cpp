@@ -25,8 +25,6 @@ char PortalName[20];
 
 char mqtt_Server[20];
 char sendPort[6];
-char *PubTopic = "test";
-char *SubTopic = "test";
 
 char msg[MSG_BUFFER_SIZE];
 
