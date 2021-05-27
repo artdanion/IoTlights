@@ -1,30 +1,43 @@
 #include <SPIFFS.h>
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager       version = 2.0.3-alpha
+#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager       version = 2.0.3-alpha in /lib
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
 
 WiFiManager wifiManager;
+PubSubClient client(ESPLwIPClient);
 
 void saveConfigCallback();
 void loadParameters();
 void saveParameters();
+void reconnect();
+void callback(char *topic, byte *payload, unsigned int length);
+
+#define LED 23
+#define MSG_BUFFER_SIZE (50)
 
 char devID[10];
 char PortalName[20];
 
 char mqtt_Server[20];
 char sendPort[6];
+char PubTopic = "test";
+char SubTopic = "test";
+
+char msg[MSG_BUFFER_SIZE];
 
 uint32_t chipId = 0;
+
 bool shouldSaveConfig = true; //flag for saving data / erase data
+
+Adafruit_NeoPixel ringLed(12, LED, NEO_RGB + NEO_KHZ800);
 
 void setup()
 {
   Serial.begin(115200);
-  pinMode(5, OUTPUT);
+  pinMode(LED, OUTPUT);
 
   for (int i = 0; i < 17; i = i + 8)
   {
@@ -52,7 +65,7 @@ void setup()
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_devID("devID", "Device ID", devID, 5);
   WiFiManagerParameter custom_mqtt_Server("mqtt_server", "mqtt_server", mqtt_Server, 20);
-  WiFiManagerParameter custom_sendPort("Port", "mqtt_port 443", sendPort, 6);
+  WiFiManagerParameter custom_sendPort("sendPort", "mqtt_port 443", sendPort, 6);
 
   //add all your parameters here
   wifiManager.addParameter(&custom_devID);
@@ -89,6 +102,11 @@ void setup()
   Serial.print(WiFi.localIP());
   Serial.println();
   Serial.println("Done");
+
+  client.setServer(mqtt_Server, sendPort);
+  client.setCallback(callback);
+
+  ringLed.begin();
 }
 
 void loop()
@@ -182,4 +200,41 @@ void saveParameters()
   Serial.println("Saved Data to FS");
   serializeJson(doc, Serial);
   shouldSaveConfig = false;
+}
+
+void callback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++)
+  {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+void reconnect()
+{
+  // Loop until we're reconnected
+  while (!client.connected())
+  {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    // devID += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(PortalName) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish(PubTopic, PortalName);
+      // ... and resubscribe
+      client.subscribe(SubTopic);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
 }
