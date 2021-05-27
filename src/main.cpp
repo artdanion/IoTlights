@@ -39,7 +39,7 @@ int b = 0;
 
 bool shouldSaveConfig = true; //flag for saving data / erase data
 
-Adafruit_NeoPixel ringLed(NUMPIXELS, LED, NEO_GBR + NEO_KHZ800);
+Adafruit_NeoPixel ringLed(NUMPIXELS, LED, NEO_GRB + NEO_KHZ800);
 
 void setup()
 {
