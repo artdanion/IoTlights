@@ -31,6 +31,7 @@ char msg[MSG_BUFFER_SIZE];
 uint32_t chipId = 0;
 unsigned long lastMsg = 0;
 unsigned long value = 0;
+uint32_t color;
 int r = 0;
 int g = 0;
 int b = 0;
@@ -78,7 +79,7 @@ void setup()
   wifiManager.addParameter(&custom_sendPort);
 
   wifiManager.setShowInfoErase(false);
-  wifiManager.setConfigPortalBlocking(false);
+  wifiManager.setConfigPortalTimeout(180);
 
   if (!wifiManager.autoConnect(PortalName, "EnterThis"))
   {
@@ -124,7 +125,7 @@ void loop()
 
   for (int i = 0; i < NUMPIXELS; i++)
   {
-    ringLed.setPixelColor(i, ringLed.Color(r, g, b));
+    ringLed.setPixelColor(i, color);
   }
   ringLed.show();
 }
@@ -229,17 +230,13 @@ void callback(char *topic, byte *payload, unsigned int length)
   for (int i = 0; i < length; i++)
   {
     Serial.print((char)payload[i]);
-    msgIn[i] = (char)payload[i + 1];
+    msgIn[i] = (char)payload[i];
     count++;
   }
   msgIn[count + 1] = '/0';
   Serial.println();
 
-  long number = (long)strtol(msgIn, NULL, 16);
-
-  r = number >> 16;
-  g = number >> 8 & 0xFF;
-  b = number & 0xFF;
+  color = strtoul(msgIn + 1, 0, 16);
 }
 
 void reconnect()
