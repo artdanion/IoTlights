@@ -30,7 +30,6 @@ char PortalName[20];
 
 char mqtt_Server[20];
 char sendPort[6];
-
 char msg[MSG_BUFFER_SIZE];
 
 uint32_t chipId = 0;
@@ -41,7 +40,7 @@ int r = 0;
 int g = 0;
 int b = 0;
 
-bool shouldSaveConfig = true; //flag for saving data / erase data
+bool shouldSaveConfig = true; // flag for saving data / erase data
 
 Adafruit_NeoPixel ringLed(NUMPIXELS, LED, NEO_GRB + NEO_KHZ800);
 
@@ -50,18 +49,21 @@ void setup()
   Serial.begin(115200);
   pinMode(LED, OUTPUT);
 
-
 #ifdef ESP32
   for (int i = 0; i < 17; i = i + 8)
   {
     chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
 #else
-    chipId=ESP.getChipId();
+  chipId = ESP.getChipId();
 #endif
 
-  //wifiManager.resetSettings();
-  //SPIFFS.format();
+  // wifiManager.resetSettings();
+  // SPIFFS.format();
+
+  // default values
+  strcpy(mqtt_Server, "mqtt.devlol.org");
+  strcpy(sendPort, "1883");
 
   snprintf(PortalName, sizeof(PortalName), "IoTlights_%d", chipId);
 
@@ -71,14 +73,15 @@ void setup()
   Serial.println("mounting FS...");
 
   // Initialize SPIFFS
-  if(!SPIFFS.begin()){
+  if (!SPIFFS.begin())
+  {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
 
   loadParameters();
 
-  //set config save notify callback
+  // set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   // The extra parameters to be configured (can be either global or just in the setup)
@@ -88,7 +91,7 @@ void setup()
   WiFiManagerParameter custom_mqtt_Server("mqtt_server", "mqtt_server", mqtt_Server, 20);
   WiFiManagerParameter custom_sendPort("sendPort", "mqtt_port 443", sendPort, 6);
 
-  //add all your parameters here
+  // add all your parameters here
   wifiManager.addParameter(&custom_devID);
   wifiManager.addParameter(&custom_mqtt_Server);
   wifiManager.addParameter(&custom_sendPort);
@@ -100,15 +103,15 @@ void setup()
   {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
-    //reset and try again, or maybe put it to deep sleep
+    // reset and try again, or maybe put it to deep sleep
     ESP.restart();
     delay(5000);
   }
 
-  //if you get here you have connected to the WiFi
+  // if you get here you have connected to the WiFi
   Serial.println("connected...");
 
-  //read updated parameters
+  // read updated parameters
   strcpy(devID, custom_devID.getValue());
   strcpy(mqtt_Server, custom_mqtt_Server.getValue());
   strcpy(sendPort, custom_sendPort.getValue());
@@ -124,7 +127,7 @@ void setup()
   Serial.println();
   Serial.println("Done");
 
-  client.setServer("mqtt.devlol.org", 1883);
+  client.setServer(mqtt_Server, atoi(sendPort));
   client.setCallback(callback);
 
   ringLed.begin();
@@ -158,7 +161,7 @@ void loadParameters()
     Serial.println("mounted file system");
     if (SPIFFS.exists("/config.json"))
     {
-      //file exists, reading and loading
+      // file exists, reading and loading
       Serial.println("reading config file");
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile)
