@@ -1,7 +1,12 @@
-#include <SPIFFS.h>
 #include <Arduino.h>
+#ifdef ESP32
 #include <WiFi.h>
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager       version = 2.0.3-alpha in /lib
+#include <SPIFFS.h>
+#else
+#include "FS.h"
+#include <ESP8266WiFi.h>
+#endif
+#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
@@ -16,7 +21,7 @@ void saveParameters();
 void reconnect();
 void callback(char *topic, byte *payload, unsigned int length);
 
-#define LED 25
+#define LED 4 // 25 used befor
 #define MSG_BUFFER_SIZE (50)
 #define NUMPIXELS 12
 
@@ -45,10 +50,15 @@ void setup()
   Serial.begin(115200);
   pinMode(LED, OUTPUT);
 
+
+#ifdef ESP32
   for (int i = 0; i < 17; i = i + 8)
   {
     chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
+#else
+    chipId=ESP.getChipId();
+#endif
 
   //wifiManager.resetSettings();
   //SPIFFS.format();
@@ -59,7 +69,12 @@ void setup()
   Serial.println(PortalName);
 
   Serial.println("mounting FS...");
-  SPIFFS.begin(true);
+  
+  // Initialize SPIFFS
+  if(!SPIFFS.begin()){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
 
   loadParameters();
 
