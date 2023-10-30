@@ -21,7 +21,7 @@ void saveParameters();
 void reconnect();
 void callback(char *topic, byte *payload, unsigned int length);
 
-#define LED 4 // 25 used befor
+#define LED 4 // 25 used befor on ESP32 // it is D2 on the esp8266 clones I have
 #define MSG_BUFFER_SIZE (50)
 #define NUMPIXELS 12
 
@@ -69,7 +69,7 @@ void setup()
   Serial.println(PortalName);
 
   Serial.println("mounting FS...");
-  
+
   // Initialize SPIFFS
   if(!SPIFFS.begin()){
     Serial.println("An Error has occurred while mounting SPIFFS");
